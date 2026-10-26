@@ -15,6 +15,9 @@ export const CODEX_MODEL_OPTIONS = Object.freeze([
   "gpt-6-luna/max",
   "gpt-6.1-sol/medium",
   "gpt-6.1-sol/high",
+  "gpt-6.1-terra/medium",
+  "gpt-6.1-terra/high",
+  "gpt-6.1-terra/max",
 ]);
 export const UPPER_MODEL_OPTIONS = Object.freeze(["disabled", ...CODEX_MODEL_OPTIONS]);
 export const REVIEW_POLICY_OPTIONS = Object.freeze(["conditional", "always", "manual"]);

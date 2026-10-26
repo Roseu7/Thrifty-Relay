@@ -29,6 +29,7 @@ Supported model and effort pairs:
 | --- | --- |
 | `gpt-6-luna` | `medium`, `high`, `max` |
 | `gpt-6.1-sol` | `medium`, `high` |
+| `gpt-6.1-terra` | `medium`, `high`, `max` |
 
 Missing fields in older config files receive defaults, and reading does not rewrite the file.
 An explicitly saved `gpt-6.1-sol/high` stays selected when the upper-model default changes.
