@@ -11,7 +11,7 @@ Platform-specific verification stays in the [known limitations](SECURITY.md#know
 
 ### Added
 
-- `gpt-6.1-terra` with `medium`, `high`, and `max` effort as a choice for `baseModel` and `upperModel`. Defaults are unchanged.
+- `gpt-6.1-terra` with `medium`, `high`, `xhigh`, and `max` effort as a choice for `baseModel` and `upperModel`. Defaults are unchanged.
 
 ## 0.4.0 - 2026-10-27
 

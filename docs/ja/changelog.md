@@ -12,7 +12,7 @@ OSごとの確認状況は[既知の制限](security.md#既知の制限)にあ�
 
 ### Added
 
-- `baseModel`と`upperModel`の選択肢に`gpt-6.1-terra`（`medium`、`high`、`max`）を追加しました。デフォルトは変わりません。
+- `baseModel`と`upperModel`の選択肢に`gpt-6.1-terra`（`medium`、`high`、`xhigh`、`max`）を追加しました。デフォルトは変わりません。
 
 ## 0.4.0 - 2026-10-27
 
