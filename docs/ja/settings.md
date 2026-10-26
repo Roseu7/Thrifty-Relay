@@ -31,6 +31,7 @@ setupも同じファイルに`tempWorkspace`を保存しますが、設定UIで�
 | --- | --- |
 | `gpt-6-luna` | `medium`、`high`、`max` |
 | `gpt-6.1-sol` | `medium`、`high` |
+| `gpt-6.1-terra` | `medium`、`high`、`xhigh`、`max` |
 
 古い設定ファイルに項目がない場合はデフォルトが使われ、読み取り時にファイルは書き換えられません。
 上位モデルのデフォルトが変わっても、明示的に保存された `gpt-6.1-sol/high` は選ばれたままです。

@@ -7,6 +7,12 @@ Releases use semantic versioning.
 Before 1.0.0, a minor release may change MCP tool inputs and outputs, settings keys, environment variables, or CLI commands without keeping the old form; such changes are listed under Changed or Removed.
 Platform-specific verification stays in the [known limitations](SECURITY.md#known-limitations).
 
+## 0.4.1 - 2026-10-27
+
+### Added
+
+- `gpt-6.1-terra` with `medium`, `high`, `xhigh`, and `max` effort as a choice for `baseModel` and `upperModel`. Defaults are unchanged.
+
 ## 0.4.0 - 2026-10-27
 
 First public release.
