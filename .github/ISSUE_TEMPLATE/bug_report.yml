@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a problem with setup, the CLI, or the MCP server.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not report vulnerabilities here. Follow [SECURITY.md](https://github.com/Roseu7/Thrifty-Relay/blob/main/SECURITY.md).
+        Remove tunnel API keys, tunnel IDs, task records, session data, process environments, and personal data before posting.
+  - type: input
+    id: commit
+    attributes:
+      label: Commit
+      description: Output of `git rev-parse --short HEAD`, and whether you have local changes.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - Linux
+        - macOS
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command or MCP tool
+      description: For example `node scripts/cli.mjs doctor` or `remote_task`.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use fake data.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened and what you expected
+      description: Include the diagnostic code, for example `CONFIG_READY` or `MCP_PROCESS_IDENTITY_UNAVAILABLE`.
+    validations:
+      required: true

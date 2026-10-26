@@ -1,0 +1,79 @@
+{
+  "name": "thrifty-relay",
+  "private": true,
+  "version": "0.4.0",
+  "description": "ThriftyRelay - a local MCP bridge for ChatGPT and Codex",
+  "main": "index.mjs",
+  "bin": {
+    "thriftyrelay": "./scripts/cli.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Roseu7/Thrifty-Relay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Roseu7/Thrifty-Relay/issues"
+  },
+  "homepage": "https://github.com/Roseu7/Thrifty-Relay#readme",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "postinstall": "node scripts/patch-desktop-commander.mjs",
+    "test": "node tests/test-runner.mjs standard",
+    "test:async": "node tests/test-runner.mjs async",
+    "start": "node index.mjs",
+    "test:code": "node tests/test-runner.mjs code",
+    "test:codex": "node tests/test-runner.mjs codex",
+    "test:stability": "node tests/test-runner.mjs stability",
+    "test:relay": "node tests/test-runner.mjs relay",
+    "test:quota": "node tests/test-quota-gate.mjs",
+    "test:usage": "node tests/test-usage-limits.mjs",
+    "test:local-ops": "node tests/test-runner.mjs local-ops",
+    "test:cli": "node tests/test-runner.mjs cli",
+    "test:platform": "node tests/test-runner.mjs platform",
+    "test:secret-service": "node tests/test-secret-service.mjs",
+    "test:access": "node tests/test-runner.mjs access",
+    "test:approval": "node tests/test-runner.mjs approval",
+    "test:approval-pending": "node tests/test-runner.mjs approval-pending",
+    "test:approval-gate": "node tests/test-runner.mjs approval-gate",
+    "test:approval-decline": "node tests/test-runner.mjs approval-decline",
+    "test:policy-install": "node tests/test-runner.mjs policy-install",
+    "test:admission": "node tests/test-runner.mjs admission",
+    "test:scratch": "node tests/test-runner.mjs scratch",
+    "test:live": "node tests/test-runner.mjs live",
+    "test:sweep": "node tests/test-runner.mjs sweep",
+    "check": "node scripts/check-syntax.mjs",
+    "build:settings-ui": "node scripts/build-settings-ui.mjs"
+  },
+  "keywords": [
+    "chatgpt",
+    "codex",
+    "mcp",
+    "orchestration",
+    "remote"
+  ],
+  "author": "Roseu",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@jitl/quickjs-wasmfile-release-sync": "0.32.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@openai/codex-sdk": "0.162.1",
+    "@wonderwhy-er/desktop-commander": "0.2.52",
+    "quickjs-emscripten-core": "0.32.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.5",
+    "esbuild": "0.25.12"
+  },
+  "overrides": {
+    "@wonderwhy-er/desktop-commander": {
+      "sharp": "^0.35.5"
+    },
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
+  }
+}

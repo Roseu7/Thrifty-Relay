@@ -1,0 +1,19 @@
+# Dependencies and local test results
+node_modules/
+.test-artifacts/
+coverage/
+*.log
+
+# Local credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.local.json
+
+# Runtime state (must not be committed)
+tasks/
+.codex/
+
+# OS metadata
+.DS_Store
+Thumbs.db

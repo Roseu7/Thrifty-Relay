@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ThriftyRelay approval</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1b1b1f; --muted: #5b5b66; --bg: #ffffff; --line: #d9d9e0;
+    --accent: #2f6bff; --primary: #2a63f0; --danger: #b42318;
+    --surface: color-mix(in srgb, var(--fg) 5%, transparent);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #ececf2; --muted: #a3a3b2; --bg: #17171c; --line: #34343e;
+      --accent: #7aa2ff; --primary: #3b6fe0; --danger: #ff9b9b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 16px; margin: 0; }
+  p { margin: 0; }
+  .head { margin-bottom: 10px; }
+  #status { min-height: 1.5em; margin: 0 0 10px; color: var(--muted); overflow-wrap: anywhere; }
+  #status:empty { display: none; }
+  #status.error { color: var(--danger); }
+  #status:focus { outline: none; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; min-height: 36px; padding: 7px 12px; }
+  button:focus-visible, summary:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button[disabled] { opacity: .55; cursor: default; }
+  button.primary { background: var(--primary); color: #fff; border: 1px solid transparent; font-weight: 600; }
+  button.plain { background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 500; }
+  #refresh { display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; padding: 8px; background: var(--surface); }
+  #refresh:hover { border-color: var(--muted); }
+  .refresh-control { position: relative; }
+  .tooltip { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 1;
+    padding: 4px 8px; border-radius: 4px; background: var(--fg); color: var(--bg);
+    font-size: 12px; white-space: nowrap; }
+  .refresh-control:hover .tooltip, .refresh-control:focus-within .tooltip { display: block; }
+  .pending { display: block; width: 100%; text-align: left; background: transparent; color: var(--fg);
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+  .pending:hover { border-color: var(--muted); }
+  .pending .kind { display: block; font-weight: 600; }
+  .pending .target { display: block; color: var(--muted); font-size: 12px; margin-top: 2px;
+    overflow: hidden; white-space: nowrap; }
+  .pending .meta { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .steps { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 14px; }
+  .step { border-left: 2px solid var(--line); padding-left: 10px; }
+  .step-title { font-weight: 600; }
+  .step-title .num { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  .step-title .stats { white-space: nowrap; margin-left: 6px; color: var(--muted); font-weight: 500; }
+  .targets { display: grid; gap: 3px; margin-top: 6px; }
+  .target { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: baseline; }
+  .target .label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .path-view { width: 100%; min-width: 0; margin: 0; }
+  .path-view > summary { min-height: 24px; white-space: nowrap; color: var(--fg); font-size: 12px; }
+  .path-short { display: inline-block; width: calc(100% - 18px); vertical-align: top;
+    overflow: hidden; white-space: nowrap; font-size: 12px; }
+  .path-view[open] .path-short { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre { margin: 6px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--surface);
+    white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow: auto; font-size: 12px; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  summary:hover { color: var(--fg); }
+  .hint { color: var(--muted); font-size: 12px; }
+  .effect { margin: 0 0 12px; font-size: 13px; }
+  .field { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .time { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .time input { width: 72px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px;
+    background: transparent; color: var(--fg); font: inherit; }
+  .decision { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+  .notice { margin: 0 0 12px; font-size: 13px; font-weight: 500; }
+  .footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line);
+    color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .footer code { padding: 2px 4px; border-radius: 4px; background: var(--surface); }
+  .state { padding: 4px 0 12px; }
+  .state p { margin-bottom: 10px; }
+  @media (max-width: 420px) {
+    .decision { flex-direction: column; align-items: stretch; }
+    .actions { flex-direction: column; }
+    .actions button { width: 100%; }
+    .target { grid-template-columns: 1fr; gap: 1px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <h1 id="heading">Approval required</h1>
+    <div class="refresh-control">
+    <button id="refresh" class="plain" type="button" aria-label="Refresh" aria-describedby="refresh-help">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 7v5h-5M4 17v-5h5"/>
+        <path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17"/>
+      </svg>
+    </button>
+    <span id="refresh-help" class="tooltip" role="tooltip">Refresh</span>
+    </div>
+  </div>
+  <p id="status" role="status" aria-live="polite" tabindex="-1"></p>
+  <div id="view"></div>
+</main>
+<script>
+(() => {
+  const KIND = {
+    en: { read: "Read file", write: "Write file", edit: "Edit file", patch: "Edit multiple files",
+      run: "Run command", search: "Search", call: "Call tool", code: "Run code", codex: "Delegate to Codex" },
+    ja: { read: "ファイルの読み取り", write: "ファイルへの書き込み", edit: "ファイルの部分編集",
+      patch: "複数ファイルの編集", run: "コマンド実行", search: "検索", call: "ツール呼び出し",
+      code: "コード実行", codex: "Codex への委譲" },
+  };
+  const L = {
+    en: {
+      heading: "Approval required",
+      refresh: "Refresh", empty: "No pending approvals.",
+      loading: "Loading…", failed: "Could not load approval information.",
+      invalidResponse: "The host response format is invalid. Reload the card to retry.",
+      reject: "Decline", approve: "Approve and run", approving: "Approving…", declining: "Declining…",
+      minutes: "Approval validity", unit: "min", max: n => "max " + n + " min",
+      invalidMinutes: n => "Enter a number from 1 to " + n + ".",
+      collapse: "The request expires 10 minutes after submission.",
+      taskId: "Request ID", showList: "Show pending list",
+      pathShow: "Show full path", pathHide: "Hide full path",
+      stopOnError: "Stops at the first failed step.",
+      stale: "The temporary work area changed after this request was submitted. It cannot run; submit it again.",
+      detail: { content: "Show content", edit: "Show change", command: "Show full command", code: "Show code",
+        prompt: "Show request", diff: "Show diff", arguments: "Show arguments" },
+      hideDetail: { content: "Hide content", edit: "Hide change", command: "Hide full command", code: "Hide code",
+        prompt: "Hide request", diff: "Hide diff", arguments: "Hide arguments" },
+      files: (files, edits) => files + (files === 1 ? " file" : " files") + " / " + edits + (edits === 1 ? " edit" : " edits"),
+      lines: n => n + (n === 1 ? " line" : " lines"),
+      truncated: (chars, bytes) => "Truncated (full text: " + chars + " characters, " + bytes + " bytes)",
+      remaining: n => n > 0 ? "expires in " + n + " min" : "expiring now",
+      more: n => " " + "+" + n + " more",
+      target: { path: "Target path", planned: "Save path", cwd: "Working directory" },
+      states: { declined: "This request was declined.",
+        expired: "This approval expired.",
+        invalidated: "The temporary work area changed, so this request is invalid. Submit it again.",
+        claimed: "This request is being processed, or its result cannot be confirmed.",
+        started: "The request was approved and execution has started.",
+        conflict: "The approval state is inconsistent. Do not run it.",
+        missing: "This request was not found." },
+    },
+    ja: {
+      heading: "実行の承認",
+      refresh: "再読み込み",
+      empty: "保留中の承認はありません。", loading: "読み込み中…", failed: "申請情報を取得できませんでした。",
+      invalidResponse: "ホストの応答形式が正しくありません。再読み込みしてください。",
+      reject: "拒否", approve: "承認して実行", approving: "承認しています...", declining: "拒否しています…",
+      minutes: "承認の有効時間", unit: "分", max: n => "最大 " + n + " 分",
+      invalidMinutes: n => "1〜" + n + " 分で入力してください。",
+      collapse: "申請は10分で失効します。",
+      taskId: "申請ID", showList: "保留一覧を見る",
+      pathShow: "パス全文を表示", pathHide: "パス全文を非表示",
+      stopOnError: "失敗した時点で停止します。",
+      stale: "申請後に一時領域が変わったため、この申請は実行できません。再申請してください。",
+      detail: { content: "内容を表示", edit: "変更内容を表示", command: "コマンド全文を表示", code: "コードを表示",
+        prompt: "依頼内容を表示", diff: "差分を表示", arguments: "引数を表示" },
+      hideDetail: { content: "内容を非表示", edit: "変更内容を非表示", command: "コマンド全文を非表示", code: "コードを非表示",
+        prompt: "依頼内容を非表示", diff: "差分を非表示", arguments: "引数を非表示" },
+      files: (files, edits) => files + "ファイル / " + edits + "箇所",
+      lines: n => n + "行",
+      truncated: (chars, bytes) => "以下省略（全文 " + chars + "文字 " + bytes + "バイト）",
+      remaining: n => n > 0 ? "残り " + n + " 分" : "まもなく失効",
+      more: n => " ほか" + n + "ステップ",
+      target: { path: "指定パス", planned: "保存先", cwd: "作業ディレクトリ" },
+      states: { declined: "この申請は拒否されました。",
+        expired: "この申請は期限切れです。",
+        invalidated: "一時領域が変わったため、この申請は無効です。再申請してください。",
+        claimed: "この申請は処理中か、結果を確認できません。",
+        started: "申請を承認し、実行が開始しました。",
+        conflict: "申請の状態が矛盾しています。実行しないでください。",
+        missing: "この申請は見つかりません。" },
+    },
+  };
+
+  const view = document.querySelector("#view");
+  const status = document.querySelector("#status");
+  const heading = document.querySelector("#heading");
+  const refreshButton = document.querySelector("#refresh");
+  const pathMeasure = document.createElement("canvas").getContext("2d");
+  let lang = (navigator.language || "").toLowerCase().startsWith("ja") ? "ja" : "en";
+  const t = () => L[lang];
+  const state = { taskId: null, data: null, maxMinutes: 0, busy: false, userSelected: false };
+  let nextId = 0;
+  const waiting = new Map();
+  let viewRequest = 0;
+
+  function call(method, params) {
+    return new Promise((resolve, reject) => {
+      const id = ++nextId;
+      const timer = setTimeout(() => { waiting.delete(id); reject(new Error("HOST_TIMEOUT")); }, 15000);
+      waiting.set(id, { resolve, reject, timer });
+      window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+    });
+  }
+
+  function contentOf(result) {
+    const value = result && typeof result === "object" && "result" in result ? result.result : result;
+    return value && !value.isError && typeof value.structuredContent === "object" ? value.structuredContent : null;
+  }
+  function textOf(result) {
+    const value = result && typeof result === "object" && "result" in result ? result.result : result;
+    return value && Array.isArray(value.content) ? value.content.map(part => part && part.text || "").join("\n") : "";
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function taskIdOf(value) {
+    if (!value || typeof value !== "object") return null;
+    if (typeof value.task_id === "string" && value.task_id) return value.task_id;
+    for (const key of ["structuredContent", "result", "arguments"]) {
+      const id = taskIdOf(value[key]);
+      if (id) return id;
+    }
+    return null;
+  }
+
+  function setLang(value) {
+    if (value !== "ja" && value !== "en") return;
+    if (lang === value && document.documentElement.lang === value) return;
+    lang = value;
+    applyLanguage();
+  }
+
+  function applyLanguage() {
+    document.documentElement.lang = lang;
+    heading.textContent = t().heading;
+    refreshButton.setAttribute("aria-label", t().refresh);
+    document.querySelector("#refresh-help").textContent = t().refresh;
+  }
+
+  function setStatus(text, isError = false) {
+    status.textContent = text || "";
+    status.classList.toggle("error", !!isError);
+  }
+
+  function focusStatus() {
+    const target = status.textContent ? status : view.querySelector(".state p") || heading;
+    target.tabIndex = -1;
+    try { target.focus(); } catch {}
+  }
+
+  function kindLabel(kind) {
+    return KIND[lang][kind] || kind;
+  }
+
+  function statsText(step) {
+    if (step.stats && typeof step.stats.files === "number") return t().files(step.stats.files, step.stats.edits || 0);
+    if (step.stats && typeof step.stats.lines === "number") return t().lines(step.stats.lines);
+    return "";
+  }
+
+  function targetLabel(step, target) {
+    if (target.key === "cwd") return t().target.cwd;
+    if (target.planned) return t().target.planned;
+    return t().target.path;
+  }
+
+  function remainingText(expiresAt) {
+    const expires = Date.parse(expiresAt);
+    if (!Number.isFinite(expires)) return "";
+    return t().remaining(Math.max(0, Math.ceil((expires - Date.now()) / 60000)));
+  }
+
+  function firstTarget(item) {
+    for (const step of item.steps || []) {
+      if (step.targets && step.targets.length) return step.targets[0];
+    }
+    return null;
+  }
+
+  function compactPath(value, width) {
+    if (pathMeasure.measureText(value).width <= width) return value;
+    const characters = Array.from(value);
+    const root = value.match(/^(?:[a-z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+[\\/]|\/)/i)?.[0] || "";
+    const prefix = root && pathMeasure.measureText(root + "…").width <= width
+      ? root : characters.slice(0, 3).join("");
+    const rest = characters.slice(Array.from(prefix).length);
+    let low = 0, high = rest.length;
+    while (low < high) {
+      const count = Math.ceil((low + high) / 2);
+      const candidate = prefix + "…" + rest.slice(rest.length - count).join("");
+      if (pathMeasure.measureText(candidate).width <= width) low = count;
+      else high = count - 1;
+    }
+    let suffix = rest.slice(rest.length - low).join("");
+    const separator = suffix.search(/[\\/]/);
+    if (separator > 0) suffix = suffix.slice(separator);
+    return prefix + "…" + suffix;
+  }
+
+  function refreshPathLabels() {
+    for (const node of view.querySelectorAll("[data-full-path]")) {
+      if (!node.clientWidth) continue;
+      pathMeasure.font = getComputedStyle(node).font;
+      const label = node.closest(".path-view")?.open ? node.dataset.fullPath
+        : compactPath(node.dataset.fullPath, Math.max(0, node.clientWidth - 2));
+      if (node.textContent !== label) node.textContent = label;
+    }
+  }
+
+  function renderPath(value) {
+    value = String(value);
+    const details = el("details", "path-view");
+    const summary = el("summary");
+    summary.setAttribute("aria-description", t().pathShow + ": " + value);
+    const short = el("code", "mono path-short", value);
+    short.dataset.fullPath = value;
+    summary.append(short);
+    details.append(summary);
+    details.addEventListener("toggle", () => {
+      summary.setAttribute("aria-description", (details.open ? t().pathHide : t().pathShow) + ": " + value);
+      refreshPathLabels();
+    });
+    return details;
+  }
+
+  function renderLoading() {
+    view.replaceChildren(el("p", "hint", t().loading));
+  }
+
+  function renderList(items) {
+    view.replaceChildren();
+    heading.textContent = lang === "ja" ? "承認待ちの申請" : "Pending requests";
+    if (!items.length) { view.append(el("p", "hint", t().empty)); return; }
+    for (const item of items) {
+      const row = el("button", "pending");
+      row.type = "button";
+      const steps = item.steps || [];
+      const extra = steps.length > 1 ? t().more(steps.length - 1) : "";
+      row.append(el("span", "kind", kindLabel(steps[0] && steps[0].kind) + extra));
+      const target = firstTarget(item);
+      if (target) {
+        const shownPath = el("span", "target mono", target.value);
+        shownPath.dataset.fullPath = target.value;
+        row.setAttribute("aria-description", target.value);
+        row.append(shownPath);
+      }
+      const meta = remainingText(item.expires_at);
+      if (meta) row.append(el("span", "meta", meta));
+      row.addEventListener("click", () => {
+        state.userSelected = true;
+        showItem(item.task_id);
+      });
+      view.append(row);
+    }
+    refreshPathLabels();
+  }
+
+  function renderState(name) {
+    view.replaceChildren();
+    const box = el("div", "state");
+    box.append(el("p", "", name === "unavailable" ? t().failed : t().states[name] || t().states.missing));
+    const back = el("button", "plain", t().showList);
+    back.type = "button";
+    back.addEventListener("click", () => { state.userSelected = false; showList(); });
+    box.append(back);
+    view.append(box);
+  }
+
+  function renderStep(step, item) {
+    const li = el("li", "step");
+    const title = el("div", "step-title");
+    title.append(el("span", "num", String(step.index + 1) + "."));
+    title.append(document.createTextNode(kindLabel(step.kind)));
+    const stats = statsText(step);
+    if (stats) title.append(el("span", "stats", stats));
+    li.append(title);
+
+    if (Array.isArray(step.targets) && step.targets.length) {
+      const targets = el("div", "targets");
+      for (const target of step.targets) {
+        const row = el("div", "target");
+        row.append(el("span", "label", targetLabel(step, target)));
+        row.append(renderPath(target.value));
+        targets.append(row);
+      }
+      li.append(targets);
+    }
+
+    if (step.summary) li.append(el("p", "hint mono", step.summary));
+
+    const needsDetail = step.detail_kind && step.body_bytes > 0;
+    if (needsDetail) {
+      const details = el("details");
+      const summary = el("summary", "", t().detail[step.detail_kind] || t().detail.content);
+      details.append(summary);
+      const body = el("div", "hint", "");
+      details.append(body);
+      let loaded = false;
+      details.addEventListener("toggle", async () => {
+        const labels = details.open ? t().hideDetail : t().detail;
+        summary.textContent = labels[step.detail_kind] || labels.content;
+        if (!details.open || loaded) return;
+        loaded = true;
+        body.textContent = t().loading;
+        try {
+          const result = await call("tools/call", {
+            name: "approval_step", arguments: { task_id: item.task_id, index: step.index },
+          });
+          const data = contentOf(result);
+          if (!data || typeof data.body !== "string") throw new Error(textOf(result) || t().failed);
+          if (data.truncated && (!Number.isInteger(data.total_chars) || !Number.isInteger(data.total_bytes))) {
+            throw new Error(t().invalidResponse);
+          }
+          body.replaceChildren();
+          body.append(el("pre", "mono", data && typeof data.body === "string" ? data.body : ""));
+          if (data.truncated) body.append(el("p", "hint", t().truncated(data.total_chars, data.total_bytes)));
+        } catch (error) {
+          loaded = false;
+          body.textContent = String(error && error.message || t().failed);
+        }
+      });
+      li.append(details);
+    }
+    return li;
+  }
+
+  function renderItem(item) {
+    view.replaceChildren();
+    const card = el("div", "card");
+    const steps = el("ol", "steps");
+    for (const step of item.steps || []) steps.append(renderStep(step, item));
+    card.append(steps);
+    if (item.steps?.length > 1 && item.stop_on_error) card.append(el("p", "effect", t().stopOnError));
+    if (item.stale) card.append(el("p", "notice", t().stale));
+
+    const field = el("label", "field", t().minutes);
+    field.htmlFor = "minutes";
+    card.append(field);
+    const time = el("div", "time");
+    const input = el("input");
+    input.id = "minutes";
+    input.type = "number";
+    input.min = "1";
+    input.max = String(Math.max(1, state.maxMinutes || 30));
+    input.step = "1";
+    input.inputMode = "numeric";
+    input.value = String(Math.min(5, Math.max(1, state.maxMinutes || 5)));
+    time.append(input, el("span", "", t().unit), el("span", "hint", t().max(Number(input.max))));
+    card.append(time);
+
+    const actions = el("div", "actions");
+    const reject = el("button", "plain", t().reject);
+    reject.type = "button";
+    const approve = el("button", "primary", t().approve);
+    approve.type = "button";
+    if (item.stale) approve.disabled = true;
+    reject.addEventListener("click", () => submit(item.task_id, "decline", { reject, approve }));
+    approve.addEventListener("click", () => submit(item.task_id, "approve", { reject, approve, input }));
+    actions.append(reject, approve);
+    const decision = el("div", "decision");
+    decision.append(el("p", "hint", t().collapse), actions);
+    card.append(decision);
+    const footer = el("div", "footer");
+    footer.append(document.createTextNode(t().taskId + ": "));
+    footer.append(el("code", "mono", item.task_id));
+    card.append(footer);
+    view.append(card);
+    refreshPathLabels();
+  }
+
+  async function submit(taskId, action, controls) {
+    if (state.busy) return;
+    const max = Math.max(1, state.maxMinutes || 30);
+    const minutes = controls.input ? Number(controls.input.value) : null;
+    if (action === "approve" && (!Number.isInteger(minutes) || minutes < 1 || minutes > max)) {
+      setStatus(t().invalidMinutes(max), true);
+      controls.input.focus();
+      return;
+    }
+    state.busy = true;
+    refreshButton.disabled = true;
+    controls.reject.disabled = true;
+    controls.approve.disabled = true;
+    view.setAttribute("aria-busy", "true");
+    setStatus(action === "approve" ? t().approving : t().declining);
+    try {
+      const result = await call("tools/call", {
+        name: action === "approve" ? "approve_task" : "decline_task",
+        arguments: action === "approve" ? { task_id: taskId, minutes } : { task_id: taskId },
+      });
+      const data = contentOf(result);
+      const succeeded = !!(data?.declined || data?.approved);
+      const message = succeeded ? "" : textOf(result);
+      await showItem(taskId);
+      if (!succeeded) setStatus(message, true);
+    } catch (error) {
+      const message = String(error && error.message || error);
+      try { await showItem(taskId); } catch {}
+      setStatus(message, true);
+    } finally {
+      state.busy = false;
+      refreshButton.disabled = false;
+      view.removeAttribute("aria-busy");
+      focusStatus();
+    }
+  }
+
+  async function showItem(taskId) {
+    const request = ++viewRequest;
+    state.taskId = taskId;
+    state.data = null;
+    applyLanguage();
+    setStatus("");
+    renderLoading();
+    try {
+      const result = await call("tools/call", {
+        name: "pending_approvals", arguments: { task_id: taskId },
+      });
+      if (request !== viewRequest) return;
+      const data = contentOf(result);
+      if (!data || typeof data.state !== "string" ||
+          (data.state === "pending" && data.item?.task_id !== taskId) ||
+          (data.state !== "pending" && !Object.hasOwn(t().states, data.state))) {
+        throw new Error(textOf(result) || t().invalidResponse);
+      }
+      setLang(data && data.language);
+      state.maxMinutes = data && Number.isFinite(data.max_minutes) ? data.max_minutes : 0;
+      if (data && data.state === "pending" && data.item) {
+        state.data = data.item;
+        renderItem(data.item);
+      } else {
+        renderState(data && data.state);
+      }
+    } catch (error) {
+      if (request !== viewRequest) return;
+      setStatus(String(error && error.message || t().failed), true);
+      renderState("unavailable");
+    }
+  }
+
+  async function showList() {
+    const request = ++viewRequest;
+    state.taskId = null;
+    state.data = null;
+    state.userSelected = false;
+    applyLanguage();
+    setStatus("");
+    renderLoading();
+    try {
+      const result = await call("tools/call", { name: "pending_approvals", arguments: {} });
+      if (request !== viewRequest) return;
+      const data = contentOf(result);
+      if (!data || !Array.isArray(data.items)) throw new Error(textOf(result) || t().invalidResponse);
+      setLang(data && data.language);
+      state.maxMinutes = data && Number.isFinite(data.max_minutes) ? data.max_minutes : 0;
+      renderList(data && Array.isArray(data.items) ? data.items : []);
+    } catch (error) {
+      if (request !== viewRequest) return;
+      setStatus(String(error && error.message || t().failed), true);
+      renderState("unavailable");
+    }
+  }
+
+  let notified = null;
+  let notifyResolve;
+  const notifiedPromise = new Promise(resolve => { notifyResolve = resolve; });
+
+  function noteTaskId(value) {
+    const id = taskIdOf(value);
+    if (!id || id === notified) return;
+    notified = id;
+    if (notifyResolve) { notifyResolve(id); notifyResolve = null; }
+    // The user's explicit selection wins over a late notification.
+    if (!state.busy && !state.userSelected && state.taskId !== id) showItem(id);
+  }
+
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (!data || data.jsonrpc !== "2.0") return;
+    if (data.method === "ui/notifications/tool-input" || data.method === "ui/notifications/tool-input-partial") {
+      noteTaskId(data.params && (data.params.arguments || data.params));
+    } else if (data.method === "ui/notifications/tool-result") {
+      noteTaskId(data.params && (data.params.structuredContent || data.params.result || data.params));
+    }
+    if (data.id && waiting.has(data.id)) {
+      const entry = waiting.get(data.id);
+      clearTimeout(entry.timer);
+      waiting.delete(data.id);
+      if (data.error) entry.reject(new Error(data.error.message || "HOST_ERROR"));
+      else entry.resolve(data.result);
+    }
+  });
+
+  refreshButton.addEventListener("click", () => {
+    if (state.busy) return;
+    if (state.taskId) showItem(state.taskId);
+    else showList();
+  });
+
+  new ResizeObserver(refreshPathLabels).observe(view);
+
+  (async () => {
+    applyLanguage();
+    status.textContent = t().loading;
+    try {
+      await call("ui/initialize", {
+        protocolVersion: "2025-06-18",
+        appInfo: { name: "thriftyrelay-approval", version: "2" },
+        appCapabilities: {},
+      });
+      window.parent.postMessage({ jsonrpc: "2.0", method: "ui/notifications/initialized" }, "*");
+    } catch {}
+
+    // The card must not guess which submission it was opened for. Without an id it shows a
+    // list the user chooses from; the first item is never selected automatically.
+    const immediate = taskIdOf(window.openai && window.openai.toolInput) ||
+      taskIdOf(window.openai && window.openai.toolOutput) ||
+      new URLSearchParams(location.search).get("task_id");
+    const notifiedId = immediate ? null : await Promise.race([
+      notifiedPromise, new Promise(resolve => setTimeout(() => resolve(null), 700)),
+    ]);
+    if (immediate) await showItem(immediate);
+    else if (notifiedId) await showItem(notifiedId);
+    else await showList();
+  })();
+})();
+</script>
+</body>
+</html>

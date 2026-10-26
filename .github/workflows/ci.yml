@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # A failure on one system must not hide the result on the others.
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows / Node.js 22
+            os: windows-2025
+            shell-suites: true
+          - name: Linux / Node.js 22
+            os: ubuntu-latest
+            shell-suites: false
+          - name: macOS / Node.js 22
+            os: macos-latest
+            shell-suites: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Check syntax
+        run: npm run check
+
+      - name: Source hash covers every loaded module
+        run: node tests/test-source-build.mjs
+
+      - name: Check usage limits parser (offline)
+        run: npm run test:usage
+
+      - name: Standard tests
+        run: npm test
+
+      - name: Codex adapter tests (fixtures only)
+        run: npm run test:codex
+
+      - name: Scoped Codex admission and recovery tests (fixtures only)
+        run: node tests/test-scope-leases.mjs && node tests/test-scoped-recovery.mjs && node tests/test-scoped-adapter.mjs
+
+      - name: Execution guard tests
+        run: npm run test:stability
+
+      - name: Relay tests
+        run: npm run test:relay
+
+      - name: Quota gate tests (fixture worker)
+        run: npm run test:quota
+
+      - name: Temporary work area tests
+        run: npm run test:scratch
+
+      - name: Tool icons and settings resource tests
+        run: |
+          node tests/test-icon-fallback.mjs
+          node tests/test-icon-metadata.mjs
+          node tests/test-settings-ui-resource.mjs
+
+      - name: Local MCP and recovery safety tests
+        run: npm run test:local-ops
+
+      - name: ThriftyRelay CLI tests
+        run: npm run test:cli
+
+      - name: Platform adapter tests
+        run: npm run test:platform
+
+      - name: POSIX runtime and state tests
+        if: runner.os != 'Windows'
+        run: |
+          node tests/test-runtime-posix.mjs
+          node tests/test-runtime-state.mjs
+
+      - name: Linux runtime integration
+        if: runner.os == 'Linux'
+        run: |
+          node tests/test-runtime-background.mjs
+          node tests/test-runtime-foreground.mjs
+          node tests/test-setup-posix.mjs
+
+      # The Linux backend talks to a real Secret Service. The test starts its own session
+      # bus and keyring, so only the two helper packages are needed here.
+      - name: Secret Service integration (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends gnome-keyring libsecret-tools
+          npm run test:secret-service
+
+      - name: Access classification and tier tests
+        run: npm run test:access
+
+      - name: Approval window store tests
+        run: npm run test:approval
+
+      - name: Pending approval tests
+        run: npm run test:approval-pending
+
+      - name: Scratch escape is refused before approval
+        run: npm run test:approval-gate
+
+      - name: Approval decline, approve, and changed scratch root
+        run: npm run test:approval-decline
+
+      - name: Policy installation tests
+        run: npm run test:policy-install
+
+      - name: Admission tests
+        run: npm run test:admission
+
+      # These two suites still issue Windows PowerShell commands through the child MCP
+      # server, so they are meaningless on a system without powershell.exe. Making them
+      # portable is separate work: see the hardcoded shell names in the test files.
+      - name: Async task tests (Windows PowerShell)
+        if: matrix.shell-suites
+        run: npm run test:async
+
+      - name: QuickJS tests (Windows PowerShell)
+        if: matrix.shell-suites
+        run: npm run test:code
